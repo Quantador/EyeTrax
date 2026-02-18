@@ -35,6 +35,8 @@ def run_demo():
     ema_alpha = args.ema_alpha
 
     gaze_estimator = GazeEstimator(model_name=args.model)
+    
+    calibration_method = "9p"
 
     if args.model_file and os.path.isfile(args.model_file):
         gaze_estimator.load_model(args.model_file)
@@ -47,8 +49,8 @@ def run_demo():
         elif calibration_method == "dense":
             run_dense_grid_calibration(
                 gaze_estimator,
-                rows=args.grid_rows,
-                cols=args.grid_cols,
+                rows=5,
+                cols=5,
                 margin_ratio=args.grid_margin,
                 camera_index=camera_index,
             )
@@ -56,6 +58,8 @@ def run_demo():
             run_lissajous_calibration(gaze_estimator, camera_index=camera_index)
 
     screen_width, screen_height = get_screen_size()
+        
+    filter_method = "kalman"
 
     if filter_method == "kalman":
         kalman = make_kalman()
@@ -94,6 +98,8 @@ def run_demo():
             if features is not None and not blink_detected:
                 gaze_point = gaze_estimator.predict(np.array([features]))[0]
                 x, y = map(int, gaze_point)
+                x, y = np.clip([x, y], [0, 0], [screen_width - 1, screen_height - 1])
+                
                 x_pred, y_pred = smoother.step(x, y)
                 contours = smoother.debug.get("contours", [])
                 cursor_alpha = min(cursor_alpha + cursor_step, 1.0)

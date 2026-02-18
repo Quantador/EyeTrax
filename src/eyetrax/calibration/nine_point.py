@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+from eyetrax import gaze
 from eyetrax.calibration.common import (
     _pulse_and_capture,
     compute_grid_points,
@@ -42,5 +43,10 @@ def run_9_point_calibration(gaze_estimator, camera_index: int = 0):
     feats, targs = res
     if feats:
         gaze_estimator.train(np.array(feats), np.array(targs))
+        metrics = gaze_estimator.model.get_validation_metrics()
+        print(f"[calibration] 9-point calibration complete with {len(feats)} samples")
+        print(f"  MAE: {metrics.get('mae', 0):.2f} px, "
+              f"RMSE: {metrics.get('rmse', 0):.2f} px")
+        gaze_estimator.save_model("9_point_calibration_model.pkl")
 
 

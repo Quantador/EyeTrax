@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from pathlib import Path
+import time
 
 import cv2
 import numpy as np
@@ -9,6 +10,11 @@ import numpy as np
 from eyetrax.constants import LEFT_EYE_INDICES, MUTUAL_INDICES, RIGHT_EYE_INDICES
 from eyetrax.models import BaseModel, create_model
 
+
+from mediapipe.tasks.python import vision
+from mediapipe.tasks import python
+
+import mediapipe as mp
 
 def _create_face_mesh():
     try:
@@ -24,43 +30,25 @@ def _create_face_mesh():
 
     # Old(er) API: `import mediapipe as mp; mp.solutions.face_mesh.FaceMesh`
     try:
-        face_mesh_cls = mediapipe.solutions.face_mesh.FaceMesh  # type: ignore[attr-defined]
+        options = vision.FaceLandmarkerOptions(
+            base_options=python.BaseOptions(model_asset_path="C:\\Users\\ywahidy\\Desktop\\playground\\EyeTrax\\face_landmarker.task"),
+            running_mode=vision.RunningMode.VIDEO,
+            output_face_blendshapes=True,
+            output_facial_transformation_matrixes=True,
+            num_faces=1)
+        
+        face_mesh_cls = vision.FaceLandmarker.create_from_options(options)
+        
     except Exception:
         pass
 
-    # Some builds expose `mediapipe.solutions` as a submodule but don't attach it to `mediapipe`.
-    if face_mesh_cls is None:
-        try:
-            import mediapipe.solutions as mp_solutions  # type: ignore
-
-            face_mesh_cls = mp_solutions.face_mesh.FaceMesh
-        except Exception:
-            pass
-
-    # Fallback: `mediapipe.python.solutions`
-    if face_mesh_cls is None:
-        try:
-            from mediapipe.python.solutions.face_mesh import FaceMesh  # type: ignore
-
-            face_mesh_cls = FaceMesh
-        except Exception as e:  # pragma: no cover
-            raise ImportError(
-                "mediapipe is installed, but FaceMesh could not be imported. "
-                "Install a mediapipe build that includes the face_mesh solution."
-            ) from e
-
-    return face_mesh_cls(
-        static_image_mode=False,
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5,
-    )
+    return face_mesh_cls
 
 
 class GazeEstimator:
     def __init__(
         self,
-        model_name: str = "ridge",
+        model_name: str = "tiny_mlp",
         model_kwargs: dict | None = None,
         ear_history_len: int = 50,
         blink_threshold_ratio: float = 0.8,
@@ -78,15 +66,19 @@ class GazeEstimator:
         Takes in image and returns landmarks around the eye region
         Normalization with nose tip as anchor
         """
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = self.face_mesh.process(image_rgb)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+        results = self.face_mesh.detect_for_video(
+            image=mp_image,
+            timestamp_ms=int(time.time() * 1000)
+        )
+        
 
-        if not results.multi_face_landmarks:
+        if not results.face_landmarks:
             return None, False
 
-        face_landmarks = results.multi_face_landmarks[0]
-        landmarks = face_landmarks.landmark
-
+        face_landmarks = results.face_landmarks[0]
+        
+        landmarks = face_landmarks
         all_points = np.array(
             [(lm.x, lm.y, lm.z) for lm in landmarks], dtype=np.float32
         )

@@ -32,3 +32,7 @@ def run_5_point_calibration(gaze_estimator, camera_index: int = 0):
     feats, targs = res
     if feats:
         gaze_estimator.train(np.array(feats), np.array(targs))
+        metrics = gaze_estimator.model.get_validation_metrics()
+        print(f"[calibration] 5-point calibration complete with {len(feats)} samples")
+        print(f"  MAE: {metrics.get('mae', 0):.2f} px, "
+              f"RMSE: {metrics.get('rmse', 0):.2f} px")

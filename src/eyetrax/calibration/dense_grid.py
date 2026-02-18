@@ -44,5 +44,8 @@ def run_dense_grid_calibration(
     feats, targs = res
     if feats:
         gaze_estimator.train(np.array(feats), np.array(targs))
+        metrics = gaze_estimator.model.get_validation_metrics()
         print(f"[dense_grid] Calibrated with {len(feats)} samples from {rows}x{cols} grid")
+        print(f"  MAE: {metrics.get('mae', 0):.2f} px, "
+              f"RMSE: {metrics.get('rmse', 0):.2f} px")
 

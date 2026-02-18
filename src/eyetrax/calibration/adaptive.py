@@ -117,5 +117,11 @@ def run_adaptive_calibration(
 
         gaze_estimator.train(np.asarray(all_feats), np.asarray(all_targs))
 
+        # Print validation metrics
+        metrics = gaze_estimator.model.get_validation_metrics()
+        print(f"[calibration] Trained on {len(all_feats)} samples")
+        print(f"  MAE: {metrics.get('mae', 0):.2f} px, "
+              f"RMSE: {metrics.get('rmse', 0):.2f} px")
+
     cap.release()
     cv2.destroyWindow("Adaptive Calibration")

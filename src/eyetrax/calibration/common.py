@@ -163,5 +163,10 @@ def _pulse_and_capture(
             if ft is not None and not blink:
                 feats.append(ft)
                 targs.append([x, y])
-
+                
+    with open("calibration_data.csv", "w") as f:
+        f.write("target_x,target_y,features\n")
+        for feat, (tx, ty) in zip(feats, targs):
+            feat_str = ",".join(f"{v:.6f}" for v in feat)
+            f.write(f"{tx},{ty},{feat_str}\n")
     return feats, targs
